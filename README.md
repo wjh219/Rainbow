@@ -5,7 +5,7 @@
 
 ### 下载方式
 #### Windows Installer (.exe)
-1. 在右侧[releases](https://gitee.com/hanbingqigu/rainbow/releases/)中下载
+1. 在右侧[releases](https://github.com/wjh219/Rainbow/releases)中下载
 
 ### 示例
 1. #### 最简单的程序 - hello world
