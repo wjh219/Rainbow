@@ -1,0 +1,9 @@
+.vs/
+.idea/
+.mypy*/
+*.spec
+TEST.py
+__pycache__/
+obj/
+bin/
+TEST.*
