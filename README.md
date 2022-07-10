@@ -8,7 +8,9 @@
 
 #### Windows Installer (.exe)
 
-1. 在右侧[releases](https://github.com/wjh219/Rainbow/releases)中下载
+1. 在右侧releases中下载
+[github](https://github.com/wjh219/Rainbow/releases) / 
+[gitee](https://gitee.com/hanbingqigu/rainbow/releases)
 
 ### 示例
 
