@@ -69,42 +69,34 @@
         # do something #
     }; # <- 注意这里 #
     ```
-        
-    程序实例:
-    ```rainbow
-    input '键入你的分数:' score;
-    # input语句，输出第二项并把用户输入的内容保存在第三项的变量 
-      本例把输入的分数保存在score变量中 #
-    score = score -> int;
-    # '->'为转换运算符
-      此处把score(输入进来的为string类型)转换为int类型
-      (int是builtins中的一个类) #
-         
-    # 分数判断 #
-    if score >= 85 {
-        print 'A';
-    }
-    elif score >= 60 {
-        print 'B';
-    }
-    elif score >= 30 {
-        print 'C';
-    }
-    else {
-        print 'D';
-    };
-    ```
-    运行结果：(其中中括号`[]`中的内容为输入的内容)
-    ```rainbow
-    >>> 键入你的分数:[64]
-    >>> B
-    ```
-    ```rainbow
-    >>> 键入你的分数:[12]
-    >>> D
-    ```
-    ```rainbow
-    >>> 键入你的分数:[97]
-    >>> A
-    ```
-        
+
+4. #### 循环语句
++ goto: `goto label;`
+
+    goto会让语句跳转到label所指定的语句 (label在语句首用美元符`$`指出)
+    , 如`$label a = 1;`
+    
+    频繁的使用goto会让代码结构变得杂乱, 但有时goto会发挥大作用
+
++ while: `while expr {# code_block #};`
+
+    while循环在*expr*为**true**时进入循环, 直到*expr*为**false**为止
+
++ for: `for expr0, expr1, expr2 {# code_block #};`
+
+    for循环在进入时执行*expr0*, 并判断*expr1*, 若为**true**则进入循环
+
+    每次循环结束时执行*expr2*并判断*expr1*, 若为**true**则继续循环
+
++ for-each: `for var : col {# code_block #};`
+    
+    for-each循环会遍历*col*容器中的每一项并放入*var*中
+
+    for-each不能修改*col*容器中的变量
+
+5. #### 导入语句
++ import: `import path : var1, var2;` | `import path : *;`
+    
+    import会寻找path目录下的module中所指定的内容并导入
+    可以指定星号`*`来表示导入所有
+
