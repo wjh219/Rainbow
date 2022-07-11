@@ -270,7 +270,7 @@ public class RbCodeObject : RbObject
                 case INPUT_VALUE:
                     val = VALUE(code);
                     var str = frame.stack.Pop();
-                    Console.WriteLine(str.GetValue());
+                    Console.Write(str.GetValue());
                     frame.values[val] = new RbStringObject(Console.ReadLine() ?? "");
                     break;
 
