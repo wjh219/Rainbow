@@ -1,4 +1,4 @@
-﻿//#define MAIN
+﻿#define MAIN
 
 namespace Rainbow;
 
