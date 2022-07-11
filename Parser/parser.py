@@ -6,11 +6,12 @@ ContinueLoop = type('ContinueLoop', (Exception,), {})
 
 
 class Lexer:
-    def __init__(self, text):
+    def __init__(self, text, lastl=None):
         self.consts: list = [None]
         self.identifiers: list = []
         self.pos = 0
         self.tokens = []
+        self.lastl = lastl
 
         if text == '':
             self.tokens.append(EOF)
@@ -83,6 +84,27 @@ class Lexer:
         self.back()
         return result, is_float
 
+    def find_const(self, const):
+        if self.lastl is None:
+            try:
+                return self.consts.index(const)
+            except ValueError:
+                self.consts.append(const)
+                return len(self.consts) - 1
+
+        else:
+            return self.lastl.find_const(const)
+
+    def find_identifier(self, iden):
+        if self.lastl is None:
+            try:
+                return self.identifiers.index(iden)
+            except ValueError:
+                self.identifiers.append(iden)
+                return len(self.identifiers) - 1
+        else:
+            return self.lastl.find_identifier(iden)
+
     def parse(self):
         while self.not_end:
             try:
@@ -115,57 +137,38 @@ class Lexer:
                         self.tokens.append(Token('keyword', res, self.get_code(res)))
                     elif is_const_kw:
                         const = const_keywords[res]
-                        if const in self.consts:
-                            self.tokens.append(Token('const', res, self.consts.index(const)))
-                        else:
-                            self.consts.append(const)
-                            self.tokens.append(Token('const', res, len(self.consts) - 1))
+                        self.tokens.append(Token('const', const, self.find_const(const)))
                     else:
-                        if res in self.identifiers:
-                            self.tokens.append(Token('identifier', res, self.identifiers.index(res)))
-                        else:
-                            self.identifiers.append(res)
-                            self.tokens.append(Token('identifier', res, len(self.identifiers) - 1))
+                        self.tokens.append(Token('identifier', res, self.find_identifier(res)))
                     raise ContinueLoop
 
                 # 检测是否为常数
                 elif self.is_number(self.char):
                     res, is_float = self.read_number()
-                    res = Decimal(res) if is_float else int(res)
-                    if res in self.consts:
-                        self.tokens.append(Token('const', res, self.consts.index(res)))
-                    else:
-                        self.consts.append(res)
-                        self.tokens.append(Token('const', res, len(self.consts) - 1))
+                    number = Decimal(res) if is_float else int(res)
+                    self.tokens.append(Token('const', number, self.find_const(number)))
                     raise ContinueLoop
 
                 # 如果是字符串
                 elif self.char == '\"' or self.char == '\'':
                     target = self.char
-                    res = ''
+                    string = ''
                     self.next()
                     while self.char != target:
-                        res += self.char
+                        string += self.char
                         self.next()
 
-                    if res in self.consts:
-                        self.tokens.append(Token('const', res, self.consts.index(res)))
-                    else:
-                        self.consts.append(res)
-                        self.tokens.append((Token('const', res, len(self.consts) - 1)))
+                    self.tokens.append((Token('const', string, self.find_const(string))))
                     raise ContinueLoop
 
                 # 如果是装饰器
                 elif self.char == '@':
                     self.next()
-                    res, is_keyword, is_const_kw = self.read_identifier()
+                    iden, is_keyword, is_const_kw = self.read_identifier()
                     if is_keyword or is_const_kw:
                         raise
-                    if res in self.identifiers:
-                        self.tokens.append(Token('decorator', res, self.identifiers.index(res)))
-                    else:
-                        self.identifiers.append(res)
-                        self.tokens.append(Token('decorator', res, len(self.identifiers) - 1))
+
+                    self.tokens.append(Token('decorator', iden, self.find_identifier(iden)))
                     raise ContinueLoop
 
                 # 如果是大括号
@@ -181,10 +184,10 @@ class Lexer:
                         text += self.char
                         self.next()
                     text = '' if len(text) == 0 else (text[0:-1] if text[-1] == '}' else text)
-                    lexer = Lexer(text)
+                    lexer = Lexer(text, self)
                     lexer.parse()
                     self.tokens.append(Token('code', lexer, -1))
-                    self.next()
+                    self.back()
                     raise ContinueLoop
 
                 # 如果是未知字符
@@ -211,10 +214,10 @@ class Parser:
             if token == Token('symbol', ';', -2):
                 for t in stmt:
                     if t.value in statements.keys():
-                        self.stmt_objs.append(statements[t.value](self.lexer, i, stmt))
+                        self.stmt_objs.append(statements[t.value](self.lexer, stmt))
                         break
                 else:
-                    self.stmt_objs.append(SimpleStmt(self.lexer, i, stmt))
+                    self.stmt_objs.append(SimpleStmt(self.lexer, stmt))
                 stmt = []
                 i += 1
                 continue
@@ -224,3 +227,4 @@ class Parser:
         else:
             if len(stmt) == 0:
                 raise Exception("需要一个分号';'")
+        return self

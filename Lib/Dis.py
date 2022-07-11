@@ -24,19 +24,16 @@ opcodes = {
 }
 
 def dis(code: Parser):
-    match = {
-        'i': code.lexer.identifiers,
-        'c': code.lexer.consts,
-        'n': [None],
-        'op': op_codes,
-        'uop': op_codes,
-    }
     codes = chain(*[stmt.compile() for stmt in code.parse().stmt_objs])
     for co in codes:
+        fmt = opcodes[co[0]][1]
         line = f'{opcodes[co[0]][0]}{" " * 10}{co[1]}'
-        if opcodes[co[0]][1] == 'l':
+        if fmt  == 'l':
             line += f'(forward {co[1]})'
-            print(line)
-            continue
-        line += f'({match[opcodes[co[0]][1]][co[1]]})'
+        elif fmt == 'i':
+            line += f'({code.lexer.identifiers[co[0]]})'
+        elif fmt == 'c':
+            line += f'({code.lexer.consts[co[0]]})'
+        elif fmt == 'op' or fmt == 'uop':
+            line += f'({op_codes[co[0]]})'
         print(line)

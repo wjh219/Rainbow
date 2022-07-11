@@ -1,5 +1,7 @@
 from collections import namedtuple
 from abc import ABC, abstractmethod
+from itertools import chain
+from iteration_utilities import deepflatten
 
 Token = namedtuple('Token', ['type', 'value', 'code'])
 Token.__eq__ = lambda self, other: \
@@ -161,7 +163,7 @@ UNARY_OP       = 7
 JUMP_IF_TRUE   = 8
 JUMP_IF_FALSE  = 9
 JUMP_FORWARD   = 10
-NEW_FAST       = 11
+BUILD_LIST     = 11
 PRINT_VALUE    = 12
 INPUT_VALUE    = 13
 LOAD_NAME      = 14
@@ -190,7 +192,7 @@ class Expr:
         i = 0
         while i < len(self.expr):
             token = self.expr[i]
-            if token.value == 'identifier':
+            if token.type == 'identifier':
                 if self.expr.index(token) < len(self.expr) - 2 \
                         and self.expr[self.expr.index(token) + 1].value in assignments:
                     self.result.append(OpCode(LOAD_REF, token.code))
@@ -224,16 +226,16 @@ class Expr:
                     self.result.append(OpCode(CALL_FUNCTION, token.code))
 
 
-            elif token.value == 'const':
+            elif token.type == 'const':
                 self.result.append(OpCode(LOAD_CONST, token.code))
-            elif token.value == 'operator':
+            elif token.type == 'operator':
                 if len(stack) == 0:
                     stack.append(token)
                 else:
                     while len(stack) != 0 and op_priority[token.value] <= op_priority[stack[-1].value]:
                         self.result.append(OpCode(BINARY_OP, op_codes[stack.pop(-1).value]))
                     stack.append(token)
-            elif token.value == 'symbol':
+            elif token.type == 'symbol':
                 if token.value == '(':
                     stack.append(token)
                 elif token.value == ')':
@@ -245,19 +247,20 @@ class Expr:
             self.result.append(OpCode(BINARY_OP, op_codes[stack.pop(-1).value]))
         return self.result
 
+    def __repr__(self):
+        return str(self.expr)
+
 
 class Stmt(ABC):
     """
     语句类的基类，需要子类继承并实现抽象方法
     """
-    def __init__(self, lexer, index, stmt):
+    def __init__(self, lexer, stmt):
         """
         :param lexer: Lexer对象
-        :param index: 语句首位在lexer.token中的index
         """
         self.stmt = stmt
         self.lexer = lexer
-        self.index = index
 
     def __repr__(self):
         return f'name={type(self).__name__} opcodes={self.compile()}'
@@ -314,7 +317,49 @@ class ImportModule(Stmt):
             names = filter(lambda e: e.value != ',', self.stmt[3:])
             return [OpCode(IMPORT_NAME, name.code) for name in names]
 
+class IfStmt(Stmt):
+    def compile(self):
+        """
+        if expr {code} (elif expr0 {code0})* [else {code1}]
+        """
+        Parser = __import__('Parser').parser.Parser
+        have_else = self.stmt[-2].value == 'else'
+        opcodes = [stmt.compile() for stmt in Parser(self.stmt[2].value).parse().stmt_objs]
+        opcodes.extend(
+            (stmt.compile()
+                for co in filter(lambda e: e.type == 'code', self.stmt[3:-1])
+                    for stmt in Parser(co.value).parse().stmt_objs)
+            if have_else
+            else
+            (stmt.compile()
+                for co in filter(lambda e: e.type == 'code', self.stmt[3:])
+                    for stmt in Parser(co.value).parse().stmt_objs)
+        )
+        expressions = []
+        flag = False
+        expr = []
+        for token in self.stmt:
+            if token.type != 'code' and token.type != 'keyword':
+                flag = True
+            if flag:
+                if token.type == 'code' or token.type == 'keyword':
+                    expressions.append(Expr(expr, self.lexer))
+                    expr = []
+                    flag = False
+                else:
+                    expr.append(token)
+
+        result = []
+        for expr, codes in zip(expressions, opcodes):
+            result.extend(expr.compile())
+            result.append(OpCode(JUMP_IF_FALSE, len(codes) + 1))
+            result.extend(codes)
+        return result
+
+
 statements = {
     'print': PrintValue,
     'import': ImportModule,
+    'input': InputValue,
+    'if': IfStmt,
 }
